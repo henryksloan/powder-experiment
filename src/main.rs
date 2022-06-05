@@ -110,16 +110,26 @@ impl World {
                                 self.particles[y][x] = Particle::default();
                             } else {
                                 let new_y = y + 1;
-                                let new_x = x as i32 + (rng.gen::<bool>() as i32 * 2 - 1);
-                                if new_x >= 0 && new_x < WIDTH as i32 {
-                                    let new_x = new_x as usize;
-                                    if self.particles[new_y][new_x].empty() {
-                                        self.particles[new_y][new_x] = self.particles[y][x];
-                                        self.particles[y][x] = Particle::default();
-                                    } else if self.particles[y][new_x].empty() {
-                                        self.particles[y][new_x] = self.particles[y][x];
-                                        self.particles[y][x] = Particle::default();
-                                    }
+                                let new_x1 = x as i32 + (rng.gen::<bool>() as i32 * 2 - 1);
+                                let new_x1_valid = new_x1 >= 0 && new_x1 < WIDTH as i32;
+                                let new_x2 = x as i32 + (rng.gen::<bool>() as i32 * 2 - 1);
+                                let new_x2_valid = new_x2 >= 0 && new_x2 < WIDTH as i32;
+                                if new_x1_valid && self.particles[new_y][new_x1 as usize].empty() {
+                                    self.particles[new_y][new_x1 as usize] = self.particles[y][x];
+                                    self.particles[y][x] = Particle::default();
+                                } else if new_x2_valid
+                                    && self.particles[new_y][new_x2 as usize].empty()
+                                {
+                                    self.particles[new_y][new_x2 as usize] = self.particles[y][x];
+                                    self.particles[y][x] = Particle::default();
+                                } else if new_x1_valid && self.particles[y][new_x1 as usize].empty()
+                                {
+                                    self.particles[y][new_x1 as usize] = self.particles[y][x];
+                                    self.particles[y][x] = Particle::default();
+                                } else if new_x2_valid && self.particles[y][new_x2 as usize].empty()
+                                {
+                                    self.particles[y][new_x2 as usize] = self.particles[y][x];
+                                    self.particles[y][x] = Particle::default();
                                 }
                             }
                         }
