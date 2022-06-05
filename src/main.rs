@@ -147,7 +147,10 @@ impl World {
     }
 
     fn set_pixel(&mut self, (x, y): (usize, usize), kind: Kind) {
-        if x < WIDTH as usize && y < HEIGHT as usize && self.particles[y][x].empty() {
+        if x < WIDTH as usize
+            && y < HEIGHT as usize
+            && (kind == Kind::Empty || self.particles[y][x].empty())
+        {
             self.particles[y][x] = Particle {
                 kind,
                 touched: self.clock,
@@ -228,9 +231,29 @@ fn main() -> Result<(), Error> {
                     Kind::Empty
                 };
 
-                if let Some(Ok(pixel_pos)) =
-                    input.mouse().map(|pos| pixels.window_pos_to_pixel(pos))
-                {
+                let (mouse_cell, mouse_prev_cell) = input
+                    .mouse()
+                    .map(|(mx, my)| {
+                        let (dx, dy) = input.mouse_diff();
+                        let prev_x = mx - dx;
+                        let prev_y = my - dy;
+
+                        let (mx_i, my_i) = pixels
+                            .window_pos_to_pixel((mx, my))
+                            .unwrap_or_else(|pos| pixels.clamp_pixel_pos(pos));
+
+                        let (px_i, py_i) = pixels
+                            .window_pos_to_pixel((prev_x, prev_y))
+                            .unwrap_or_else(|pos| pixels.clamp_pixel_pos(pos));
+
+                        (
+                            (mx_i as isize, my_i as isize),
+                            (px_i as isize, py_i as isize),
+                        )
+                    })
+                    .unwrap_or_default();
+
+                for pixel_pos in line_drawing::Bresenham::new(mouse_prev_cell, mouse_cell) {
                     let (pixel_x, pixel_y) = (pixel_pos.0 as i32, pixel_pos.1 as i32);
                     for x_off in -1..=1 {
                         for y_off in -1..=1 {
