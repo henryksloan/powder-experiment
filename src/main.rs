@@ -81,17 +81,23 @@ impl World {
                     Kind::Empty | Kind::Stone => {}
                     Kind::Sand => {
                         if (y as u32) < HEIGHT - 1 {
-                            if self.particles[y + 1][x].empty() {
-                                self.particles[y + 1][x] = self.particles[y][x];
-                                self.particles[y][x] = Particle::default();
+                            if self.particles[y + 1][x].empty()
+                                || self.particles[y + 1][x].kind == Kind::Water
+                            {
+                                let self_kind = self.particles[y][x];
+                                self.particles[y][x] = self.particles[y + 1][x];
+                                self.particles[y + 1][x] = self_kind;
                             } else {
                                 let new_y = y + 1;
                                 let new_x = x as i32 + (rng.gen::<bool>() as i32 * 2 - 1);
                                 if new_x >= 0 && new_x < WIDTH as i32 {
                                     let new_x = new_x as usize;
-                                    if self.particles[new_y][new_x].empty() {
-                                        self.particles[new_y][new_x] = self.particles[y][x];
-                                        self.particles[y][x] = Particle::default();
+                                    if self.particles[new_y][new_x].empty()
+                                        || self.particles[new_y][new_x].kind == Kind::Water
+                                    {
+                                        let self_kind = self.particles[y][x];
+                                        self.particles[y][x] = self.particles[new_y][new_x];
+                                        self.particles[new_y][new_x] = self_kind;
                                     }
                                 }
                             }
@@ -141,7 +147,7 @@ impl World {
     }
 
     fn set_pixel(&mut self, (x, y): (usize, usize), kind: Kind) {
-        if x < WIDTH as usize && y < HEIGHT as usize {
+        if x < WIDTH as usize && y < HEIGHT as usize && self.particles[y][x].empty() {
             self.particles[y][x] = Particle {
                 kind,
                 touched: self.clock,
