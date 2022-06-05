@@ -70,8 +70,13 @@ impl World {
         self.clock = !self.clock;
         let mut rng = rand::thread_rng();
 
+        let x_ord_hack: Vec<usize> = if self.clock {
+            (0..WIDTH as usize).collect()
+        } else {
+            ((0..WIDTH as usize).rev()).collect()
+        };
         for y in 0..HEIGHT as usize {
-            for x in 0..WIDTH as usize {
+            for &x in &x_ord_hack {
                 if self.particles[y][x].touched == self.clock {
                     continue;
                 }
@@ -104,15 +109,17 @@ impl World {
                         }
                     }
                     Kind::Water => {
+                        // TODO: Remove this condition
                         if (y as u32) < HEIGHT - 1 {
                             if self.particles[y + 1][x].empty() {
                                 self.particles[y + 1][x] = self.particles[y][x];
                                 self.particles[y][x] = Particle::default();
                             } else {
                                 let new_y = y + 1;
-                                let new_x1 = x as i32 + (rng.gen::<bool>() as i32 * 2 - 1);
+                                let x_off = rng.gen::<bool>() as i32 * 2 - 1;
+                                let new_x1 = x as i32 + x_off;
                                 let new_x1_valid = new_x1 >= 0 && new_x1 < WIDTH as i32;
-                                let new_x2 = x as i32 + (rng.gen::<bool>() as i32 * 2 - 1);
+                                let new_x2 = x as i32 - x_off;
                                 let new_x2_valid = new_x2 >= 0 && new_x2 < WIDTH as i32;
                                 if new_x1_valid && self.particles[new_y][new_x1 as usize].empty() {
                                     self.particles[new_y][new_x1 as usize] = self.particles[y][x];
