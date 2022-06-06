@@ -75,7 +75,7 @@ impl World {
         } else {
             ((0..WIDTH as usize).rev()).collect()
         };
-        for y in 0..HEIGHT as usize {
+        for y in (0..HEIGHT as usize).rev() {
             for &x in &x_ord_hack {
                 if self.particles[y][x].touched == self.clock {
                     continue;
@@ -116,11 +116,18 @@ impl World {
                                 self.particles[y][x] = Particle::default();
                             } else {
                                 let new_y = y + 1;
-                                let x_off = rng.gen::<bool>() as i32 * 2 - 1;
+                                let x_off =
+                                    rng.gen_range(1..3) * (rng.gen::<bool>() as i32 * 2 - 1);
                                 let new_x1 = x as i32 + x_off;
                                 let new_x1_valid = new_x1 >= 0 && new_x1 < WIDTH as i32;
                                 let new_x2 = x as i32 - x_off;
                                 let new_x2_valid = new_x2 >= 0 && new_x2 < WIDTH as i32;
+
+                                let x_off = rng.gen::<bool>() as i32 * 2 - 1;
+                                let new_x3 = x as i32 + x_off;
+                                let new_x3_valid = new_x3 >= 0 && new_x3 < WIDTH as i32;
+                                let new_x4 = x as i32 - x_off;
+                                let new_x4_valid = new_x4 >= 0 && new_x4 < WIDTH as i32;
                                 if new_x1_valid && self.particles[new_y][new_x1 as usize].empty() {
                                     self.particles[new_y][new_x1 as usize] = self.particles[y][x];
                                     self.particles[y][x] = Particle::default();
@@ -129,13 +136,13 @@ impl World {
                                 {
                                     self.particles[new_y][new_x2 as usize] = self.particles[y][x];
                                     self.particles[y][x] = Particle::default();
-                                } else if new_x1_valid && self.particles[y][new_x1 as usize].empty()
+                                } else if new_x3_valid && self.particles[y][new_x3 as usize].empty()
                                 {
-                                    self.particles[y][new_x1 as usize] = self.particles[y][x];
+                                    self.particles[y][new_x3 as usize] = self.particles[y][x];
                                     self.particles[y][x] = Particle::default();
-                                } else if new_x2_valid && self.particles[y][new_x2 as usize].empty()
+                                } else if new_x4_valid && self.particles[y][new_x4 as usize].empty()
                                 {
-                                    self.particles[y][new_x2 as usize] = self.particles[y][x];
+                                    self.particles[y][new_x4 as usize] = self.particles[y][x];
                                     self.particles[y][x] = Particle::default();
                                 }
                             }
@@ -224,6 +231,8 @@ fn main() -> Result<(), Error> {
 
             if input.key_pressed(VirtualKeyCode::Space) {
                 paused = !paused;
+            } else if input.key_pressed(VirtualKeyCode::F) {
+                paused = true;
             }
 
             // Resize the window
@@ -284,7 +293,7 @@ fn main() -> Result<(), Error> {
             }
 
             // Update internal state and request a redraw
-            if !paused {
+            if !paused || input.key_pressed(VirtualKeyCode::F) {
                 world.update();
             }
 
