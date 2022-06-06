@@ -127,52 +127,51 @@ impl World {
                         }
                     }
                     Kind::Water => {
-                        // TODO: Remove this condition
-                        if (y as u32) < GRID_HEIGHT - 1 {
-                            if self.particles[y + 1][x].empty() {
-                                self.particles[y + 1][x] = self.particles[y][x];
+                        let down_valid = y < GRID_HEIGHT as usize - 1;
+                        if down_valid && self.particles[y + 1][x].empty() {
+                            self.particles[y + 1][x] = self.particles[y][x];
+                            self.particles[y][x] = Particle::default();
+                        } else {
+                            // TODO: Rename and refactor this
+                            let new_y = y + 1;
+                            let (x_off, x_check_off) = {
+                                let n = rng.gen_range(1..3);
+                                let sign = rng.gen::<bool>() as i32 * 2 - 1;
+                                (n * sign, (n - 1) * sign)
+                            };
+                            let new_x1 = x as i32 + x_off;
+                            let check_x1 = x as i32 + x_check_off;
+                            let new_x1_valid = new_x1 >= 0 && new_x1 < GRID_WIDTH as i32;
+
+                            let x_off = rng.gen::<bool>() as i32 * 2 - 1;
+                            let new_x4 = x as i32 - x_off;
+                            let new_x4_valid = new_x4 >= 0 && new_x4 < GRID_WIDTH as i32;
+
+                            let (x_off, x_check_off) = {
+                                let n = rng.gen_range(2..5);
+                                let sign = rng.gen::<bool>() as i32 * 2 - 1;
+                                (n * sign, (n - 1) * sign)
+                            };
+                            let new_x5 = x as i32 + x_off;
+                            let check_x5 = x as i32 + x_check_off;
+                            let new_x5_valid = new_x5 >= 0 && new_x5 < GRID_WIDTH as i32;
+                            if down_valid
+                                && new_x1_valid
+                                && self.particles[new_y][new_x1 as usize].empty()
+                                && self.particles[new_y][check_x1 as usize].kind == Kind::Water
+                            {
+                                self.particles[new_y][new_x1 as usize] = self.particles[y][x];
                                 self.particles[y][x] = Particle::default();
-                            } else {
-                                // TODO: Rename and refactor this
-                                let new_y = y + 1;
-                                let (x_off, x_check_off) = {
-                                    let n = rng.gen_range(1..3);
-                                    let sign = rng.gen::<bool>() as i32 * 2 - 1;
-                                    (n * sign, (n - 1) * sign)
-                                };
-                                let new_x1 = x as i32 + x_off;
-                                let check_x1 = x as i32 + x_check_off;
-                                let new_x1_valid = new_x1 >= 0 && new_x1 < GRID_WIDTH as i32;
-
-                                let x_off = rng.gen::<bool>() as i32 * 2 - 1;
-                                let new_x4 = x as i32 - x_off;
-                                let new_x4_valid = new_x4 >= 0 && new_x4 < GRID_WIDTH as i32;
-
-                                let (x_off, x_check_off) = {
-                                    let n = rng.gen_range(2..5);
-                                    let sign = rng.gen::<bool>() as i32 * 2 - 1;
-                                    (n * sign, (n - 1) * sign)
-                                };
-                                let new_x5 = x as i32 + x_off;
-                                let check_x5 = x as i32 + x_check_off;
-                                let new_x5_valid = new_x5 >= 0 && new_x5 < GRID_WIDTH as i32;
-                                if new_x1_valid
-                                    && self.particles[new_y][new_x1 as usize].empty()
-                                    && self.particles[new_y][check_x1 as usize].kind == Kind::Water
-                                {
-                                    self.particles[new_y][new_x1 as usize] = self.particles[y][x];
-                                    self.particles[y][x] = Particle::default();
-                                } else if new_x4_valid && self.particles[y][new_x4 as usize].empty()
-                                {
-                                    self.particles[y][new_x4 as usize] = self.particles[y][x];
-                                    self.particles[y][x] = Particle::default();
-                                } else if new_x5_valid
-                                    && self.particles[y][new_x5 as usize].empty()
-                                    && self.particles[new_y][check_x5 as usize].kind == Kind::Water
-                                {
-                                    self.particles[y][new_x5 as usize] = self.particles[y][x];
-                                    self.particles[y][x] = Particle::default();
-                                }
+                            } else if new_x4_valid && self.particles[y][new_x4 as usize].empty() {
+                                self.particles[y][new_x4 as usize] = self.particles[y][x];
+                                self.particles[y][x] = Particle::default();
+                            } else if down_valid
+                                && new_x5_valid
+                                && self.particles[y][new_x5 as usize].empty()
+                                && self.particles[new_y][check_x5 as usize].kind == Kind::Water
+                            {
+                                self.particles[y][new_x5 as usize] = self.particles[y][x];
+                                self.particles[y][x] = Particle::default();
                             }
                         }
                     }
