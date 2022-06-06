@@ -130,9 +130,13 @@ impl World {
                             } else {
                                 // TODO: Rename and refactor this
                                 let new_y = y + 1;
-                                let x_off =
-                                    rng.gen_range(1..3) * (rng.gen::<bool>() as i32 * 2 - 1);
+                                let (x_off, x_check_off) = {
+                                    let n = rng.gen_range(1..3);
+                                    let sign = rng.gen::<bool>() as i32 * 2 - 1;
+                                    (n * sign, (n - 1) * sign)
+                                };
                                 let new_x1 = x as i32 + x_off;
+                                let check_x1 = x as i32 + x_check_off;
                                 let new_x1_valid = new_x1 >= 0 && new_x1 < WIDTH as i32;
 
                                 let x_off = rng.gen::<bool>() as i32 * 2 - 1;
@@ -147,7 +151,10 @@ impl World {
                                 let new_x5 = x as i32 + x_off;
                                 let check_x5 = x as i32 + x_check_off;
                                 let new_x5_valid = new_x5 >= 0 && new_x5 < WIDTH as i32;
-                                if new_x1_valid && self.particles[new_y][new_x1 as usize].empty() {
+                                if new_x1_valid
+                                    && self.particles[new_y][new_x1 as usize].empty()
+                                    && self.particles[new_y][check_x1 as usize].kind == Kind::Water
+                                {
                                     self.particles[new_y][new_x1 as usize] = self.particles[y][x];
                                     self.particles[y][x] = Particle::default();
                                 } else if new_x4_valid && self.particles[y][new_x4 as usize].empty()
