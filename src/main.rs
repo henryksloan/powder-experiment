@@ -10,8 +10,13 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
-const WIDTH: u32 = 320;
-const HEIGHT: u32 = 240;
+const GRID_WIDTH: u32 = 320;
+const GRID_HEIGHT: u32 = 240;
+
+const TOOLBAR_HEIGHT: u32 = 30;
+
+const WIN_WIDTH: u32 = GRID_WIDTH;
+const WIN_HEIGHT: u32 = GRID_HEIGHT + TOOLBAR_HEIGHT;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
@@ -73,11 +78,11 @@ impl World {
         let mut rng = rand::thread_rng();
 
         let x_ord_hack: Vec<usize> = if self.clock {
-            (0..WIDTH as usize).collect()
+            (0..GRID_WIDTH as usize).collect()
         } else {
-            ((0..WIDTH as usize).rev()).collect()
+            ((0..GRID_WIDTH as usize).rev()).collect()
         };
-        for y in (0..HEIGHT as usize).rev() {
+        for y in (0..GRID_HEIGHT as usize).rev() {
             for &x in &x_ord_hack {
                 if self.particles[y][x].touched == self.clock {
                     continue;
@@ -87,7 +92,7 @@ impl World {
                 match self.particles[y][x].kind {
                     Kind::Empty | Kind::Stone => {}
                     Kind::Sand => {
-                        if (y as u32) < HEIGHT - 1 {
+                        if (y as u32) < GRID_HEIGHT - 1 {
                             if self.particles[y + 1][x].empty()
                                 || self.particles[y + 1][x].kind == Kind::Water
                             {
@@ -97,7 +102,7 @@ impl World {
                             } else {
                                 let new_y = y + 1;
                                 let new_x = x as i32 + (rng.gen::<bool>() as i32 * 2 - 1);
-                                if new_x >= 0 && new_x < WIDTH as i32 {
+                                if new_x >= 0 && new_x < GRID_WIDTH as i32 {
                                     let new_x = new_x as usize;
                                     if self.particles[new_y][new_x].empty()
                                         || self.particles[new_y][new_x].kind == Kind::Water
@@ -111,7 +116,7 @@ impl World {
                         }
                     }
                     Kind::Gravel => {
-                        if (y as u32) < HEIGHT - 1 {
+                        if (y as u32) < GRID_HEIGHT - 1 {
                             if self.particles[y + 1][x].empty()
                                 || self.particles[y + 1][x].kind == Kind::Water
                             {
@@ -123,7 +128,7 @@ impl World {
                     }
                     Kind::Water => {
                         // TODO: Remove this condition
-                        if (y as u32) < HEIGHT - 1 {
+                        if (y as u32) < GRID_HEIGHT - 1 {
                             if self.particles[y + 1][x].empty() {
                                 self.particles[y + 1][x] = self.particles[y][x];
                                 self.particles[y][x] = Particle::default();
@@ -137,11 +142,11 @@ impl World {
                                 };
                                 let new_x1 = x as i32 + x_off;
                                 let check_x1 = x as i32 + x_check_off;
-                                let new_x1_valid = new_x1 >= 0 && new_x1 < WIDTH as i32;
+                                let new_x1_valid = new_x1 >= 0 && new_x1 < GRID_WIDTH as i32;
 
                                 let x_off = rng.gen::<bool>() as i32 * 2 - 1;
                                 let new_x4 = x as i32 - x_off;
-                                let new_x4_valid = new_x4 >= 0 && new_x4 < WIDTH as i32;
+                                let new_x4_valid = new_x4 >= 0 && new_x4 < GRID_WIDTH as i32;
 
                                 let (x_off, x_check_off) = {
                                     let n = rng.gen_range(2..5);
@@ -150,7 +155,7 @@ impl World {
                                 };
                                 let new_x5 = x as i32 + x_off;
                                 let check_x5 = x as i32 + x_check_off;
-                                let new_x5_valid = new_x5 >= 0 && new_x5 < WIDTH as i32;
+                                let new_x5_valid = new_x5 >= 0 && new_x5 < GRID_WIDTH as i32;
                                 if new_x1_valid
                                     && self.particles[new_y][new_x1 as usize].empty()
                                     && self.particles[new_y][check_x1 as usize].kind == Kind::Water
@@ -177,16 +182,20 @@ impl World {
     }
 
     fn draw(&self, frame: &mut [u8]) {
-        for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
-            let x = i % WIDTH as usize;
-            let y = i / WIDTH as usize;
+        for (i, pixel) in frame
+            .chunks_exact_mut(4)
+            .skip((WIN_WIDTH * (WIN_HEIGHT - GRID_HEIGHT)) as usize)
+            .enumerate()
+        {
+            let x = i % GRID_WIDTH as usize;
+            let y = i / GRID_WIDTH as usize;
 
             let particle = &self.particles[y][x];
 
             let rgba = if particle.kind != Kind::Empty {
                 particle.kind.color()
             } else {
-                [0x00, 0x00, 0x00, 0xff]
+                [0x00, 0x00, 0x00, 0xFF]
             };
 
             pixel.copy_from_slice(&rgba);
@@ -194,8 +203,8 @@ impl World {
     }
 
     fn set_pixel(&mut self, (x, y): (usize, usize), kind: Kind) {
-        if x < WIDTH as usize
-            && y < HEIGHT as usize
+        if x < GRID_WIDTH as usize
+            && y < GRID_HEIGHT as usize
             && (kind == Kind::Empty || self.particles[y][x].empty())
         {
             self.particles[y][x] = Particle {
@@ -206,12 +215,56 @@ impl World {
     }
 }
 
+const NUM_KEYS: [VirtualKeyCode; 10] = {
+    use VirtualKeyCode::*;
+    [Key1, Key2, Key3, Key4, Key5, Key6, Key7, Key8, Key9, Key0]
+};
+const TOOLBAR_KINDS: [Kind; 4] = {
+    use Kind::*;
+    [Sand, Gravel, Water, Stone]
+};
+
+struct Toolbar {}
+
+impl Toolbar {
+    fn draw(&self, frame: &mut [u8], selected_kind: Kind) {
+        for (i, pixel) in frame
+            .chunks_exact_mut(4)
+            .take((WIN_WIDTH * TOOLBAR_HEIGHT) as usize)
+            .enumerate()
+        {
+            let x = i % WIN_WIDTH as usize;
+            let y = i / WIN_WIDTH as usize;
+
+            let part_size = (WIN_WIDTH / 10) as usize;
+            let part_gap = 4;
+            let top_gap = 5;
+            let which_part = x / part_size;
+            let x_in_part = x % part_size;
+
+            let do_color = (y > top_gap && y < TOOLBAR_HEIGHT as usize - top_gap)
+                && (x_in_part >= part_gap && x_in_part < part_size - part_gap);
+
+            let mut rgba = [0x00, 0x00, 0x00, 0xFF];
+            if which_part < TOOLBAR_KINDS.len() {
+                let which_kind = TOOLBAR_KINDS[which_part];
+                if which_kind == selected_kind && !do_color {
+                    rgba = [0x7f, 0x00, 0x00, 0xFF];
+                } else if do_color {
+                    rgba = which_kind.color();
+                }
+            }
+            pixel.copy_from_slice(&rgba);
+        }
+    }
+}
+
 fn main() -> Result<(), Error> {
     env_logger::init();
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let window = {
-        let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
+        let size = LogicalSize::new(WIN_WIDTH as f64, WIN_HEIGHT as f64);
         WindowBuilder::new()
             .with_title("Powder simulation test")
             .with_inner_size(size)
@@ -223,9 +276,10 @@ fn main() -> Result<(), Error> {
     let mut pixels = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(WIDTH, HEIGHT, surface_texture)?
+        Pixels::new(WIN_WIDTH, WIN_HEIGHT, surface_texture)?
     };
     let mut world = World::new();
+    let toolbar = Toolbar {};
 
     let mut paused = false;
     let mut selected_kind = Kind::Sand;
@@ -234,6 +288,7 @@ fn main() -> Result<(), Error> {
         // Draw the current frame
         if let Event::RedrawRequested(_) = event {
             world.draw(pixels.get_frame());
+            toolbar.draw(pixels.get_frame(), selected_kind);
             if pixels
                 .render()
                 .map_err(|e| error!("pixels.render() failed: {}", e))
@@ -263,19 +318,31 @@ fn main() -> Result<(), Error> {
                 pixels.resize_surface(size.width, size.height);
             }
 
-            if input.key_pressed(VirtualKeyCode::Key1) {
-                selected_kind = Kind::Sand;
-            } else if input.key_pressed(VirtualKeyCode::Key2) {
-                selected_kind = Kind::Gravel;
-            } else if input.key_pressed(VirtualKeyCode::Key3) {
-                selected_kind = Kind::Water;
-            } else if input.key_pressed(VirtualKeyCode::Key4) {
-                selected_kind = Kind::Stone;
+            let num_key_pressed_index = NUM_KEYS.iter().position(|&key| input.key_pressed(key));
+            if let Some(num_key_pressed_index) = num_key_pressed_index {
+                if num_key_pressed_index < TOOLBAR_KINDS.len() {
+                    selected_kind = TOOLBAR_KINDS[num_key_pressed_index];
+                }
             }
 
             let left_click = input.mouse_held(0);
             let right_click = input.mouse_held(1);
+
             if left_click || right_click {
+                if input.mouse_pressed(0) {
+                    if let Some(Ok((pixel_x, pixel_y))) = input
+                        .mouse()
+                        .map(|mouse_pos| pixels.window_pos_to_pixel(mouse_pos))
+                    {
+                        if pixel_y < TOOLBAR_HEIGHT as usize {
+                            let which_part = pixel_x / (WIN_WIDTH as usize / 10);
+                            if which_part < TOOLBAR_KINDS.len() {
+                                selected_kind = TOOLBAR_KINDS[which_part];
+                            }
+                        }
+                    }
+                }
+
                 let click_kind = if left_click {
                     selected_kind
                 } else {
@@ -309,7 +376,10 @@ fn main() -> Result<(), Error> {
                     for x_off in -1..=1 {
                         for y_off in -1..=1 {
                             world.set_pixel(
-                                ((pixel_x + x_off) as usize, (pixel_y + y_off) as usize),
+                                (
+                                    (pixel_x + x_off) as usize,
+                                    (pixel_y + y_off - TOOLBAR_HEIGHT as i32) as usize,
+                                ),
                                 click_kind,
                             );
                         }
