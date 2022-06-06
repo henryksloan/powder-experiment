@@ -17,6 +17,7 @@ const HEIGHT: u32 = 240;
 pub enum Kind {
     Empty,
     Sand,
+    Gravel,
     Water,
     Stone,
 }
@@ -26,6 +27,7 @@ impl Kind {
         match *self {
             Self::Empty => [0, 0, 0, 0],
             Self::Sand => [0xC2, 0xB2, 0x80, 0xFF],
+            Self::Gravel => [0x60, 0x60, 0x60, 0xFF],
             Self::Water => [0x00, 0x96, 0xFF, 0xFF],
             Self::Stone => [0xCC, 0xCC, 0xCC, 0xFF],
         }
@@ -105,6 +107,17 @@ impl World {
                                         self.particles[new_y][new_x] = self_kind;
                                     }
                                 }
+                            }
+                        }
+                    }
+                    Kind::Gravel => {
+                        if (y as u32) < HEIGHT - 1 {
+                            if self.particles[y + 1][x].empty()
+                                || self.particles[y + 1][x].kind == Kind::Water
+                            {
+                                let self_kind = self.particles[y][x];
+                                self.particles[y][x] = self.particles[y + 1][x];
+                                self.particles[y + 1][x] = self_kind;
                             }
                         }
                     }
@@ -246,8 +259,10 @@ fn main() -> Result<(), Error> {
             if input.key_pressed(VirtualKeyCode::Key1) {
                 selected_kind = Kind::Sand;
             } else if input.key_pressed(VirtualKeyCode::Key2) {
-                selected_kind = Kind::Water;
+                selected_kind = Kind::Gravel;
             } else if input.key_pressed(VirtualKeyCode::Key3) {
+                selected_kind = Kind::Water;
+            } else if input.key_pressed(VirtualKeyCode::Key4) {
                 selected_kind = Kind::Stone;
             }
 
