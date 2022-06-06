@@ -115,34 +115,37 @@ impl World {
                                 self.particles[y + 1][x] = self.particles[y][x];
                                 self.particles[y][x] = Particle::default();
                             } else {
+                                // TODO: Rename and refactor this
                                 let new_y = y + 1;
                                 let x_off =
                                     rng.gen_range(1..3) * (rng.gen::<bool>() as i32 * 2 - 1);
                                 let new_x1 = x as i32 + x_off;
                                 let new_x1_valid = new_x1 >= 0 && new_x1 < WIDTH as i32;
-                                let new_x2 = x as i32 - x_off;
-                                let new_x2_valid = new_x2 >= 0 && new_x2 < WIDTH as i32;
 
                                 let x_off = rng.gen::<bool>() as i32 * 2 - 1;
-                                let new_x3 = x as i32 + x_off;
-                                let new_x3_valid = new_x3 >= 0 && new_x3 < WIDTH as i32;
                                 let new_x4 = x as i32 - x_off;
                                 let new_x4_valid = new_x4 >= 0 && new_x4 < WIDTH as i32;
+
+                                let (x_off, x_check_off) = {
+                                    let n = rng.gen_range(2..5);
+                                    let sign = rng.gen::<bool>() as i32 * 2 - 1;
+                                    (n * sign, (n - 1) * sign)
+                                };
+                                let new_x5 = x as i32 + x_off;
+                                let check_x5 = x as i32 + x_check_off;
+                                let new_x5_valid = new_x5 >= 0 && new_x5 < WIDTH as i32;
                                 if new_x1_valid && self.particles[new_y][new_x1 as usize].empty() {
                                     self.particles[new_y][new_x1 as usize] = self.particles[y][x];
-                                    self.particles[y][x] = Particle::default();
-                                } else if new_x2_valid
-                                    && self.particles[new_y][new_x2 as usize].empty()
-                                {
-                                    self.particles[new_y][new_x2 as usize] = self.particles[y][x];
-                                    self.particles[y][x] = Particle::default();
-                                } else if new_x3_valid && self.particles[y][new_x3 as usize].empty()
-                                {
-                                    self.particles[y][new_x3 as usize] = self.particles[y][x];
                                     self.particles[y][x] = Particle::default();
                                 } else if new_x4_valid && self.particles[y][new_x4 as usize].empty()
                                 {
                                     self.particles[y][new_x4 as usize] = self.particles[y][x];
+                                    self.particles[y][x] = Particle::default();
+                                } else if new_x5_valid
+                                    && self.particles[y][new_x5 as usize].empty()
+                                    && self.particles[new_y][check_x5 as usize].kind == Kind::Water
+                                {
+                                    self.particles[y][new_x5 as usize] = self.particles[y][x];
                                     self.particles[y][x] = Particle::default();
                                 }
                             }
@@ -190,7 +193,7 @@ fn main() -> Result<(), Error> {
     let window = {
         let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
         WindowBuilder::new()
-            .with_title("Hello Pixels")
+            .with_title("Powder simulation test")
             .with_inner_size(size)
             .with_min_inner_size(size)
             .build(&event_loop)
